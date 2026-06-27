@@ -1,0 +1,242 @@
+/* Enhanced Quiz Styles */
+
+.quiz-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Feedback Notification */
+.feedback-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transform: translateX(150%);
+  transition: transform 0.3s ease-out;
+}
+
+.feedback-notification.show {
+  transform: translateX(0);
+}
+
+.feedback-notification.success {
+  background-color: var(--success);
+}
+
+.feedback-notification.error {
+  background-color: var(--error);
+}
+
+/* Quiz Header */
+.quiz-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+/* Progress Bar */
+.quiz-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.quiz-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+
+/* Streak and Points Display */
+.streak-display, .points-display {
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* Score Circle */
+.score-circle {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.score-circle.pass {
+  background: linear-gradient(135deg, var(--success), #4caf50);
+}
+
+.score-circle.fail {
+  background: linear-gradient(135deg, var(--error), #f44336);
+}
+
+.score-label {
+  font-size: 1.1rem;
+  margin-top: 8px;
+}
+
+.score-stats {
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
+/* Stats Card */
+.results-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+  margin: 32px 0;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--card-bg);
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* Answer Options */
+.answer-option {
+  width: 100%;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.answer-option:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.answer-option.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.answer-option.disabled {
+  cursor: default;
+}
+
+.answer-option.correct {
+  border-color: var(--success);
+  background: var(--success-light);
+}
+
+.answer-option.incorrect {
+  border-color: var(--error);
+  background: var(--error-light);
+}
+
+/* Explanation */
+.explanation {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--info-bg);
+  border-radius: 12px;
+  border-left: 4px solid var(--primary);
+}
+
+.explanation h4 {
+  margin-top: 0;
+  color: var(--primary);
+}
+
+/* Quiz Actions */
+.quiz-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .quiz-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .results-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .quiz-actions {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.question-card {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.badge {
+  animation: pulse 0.5s ease-in-out;
+}

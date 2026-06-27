@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-export default function DomainDetail({ domain, progress, onComplete, onBack }) {
+export default function DomainDetail({ domain, progress, onComplete, onBack, onStartQuiz }) {
   const [expandedTopic, setExpandedTopic] = useState(null);
 
   if (!domain) return <div>No domain selected</div>;
@@ -17,6 +17,16 @@ export default function DomainDetail({ domain, progress, onComplete, onBack }) {
 
   const isComplete = (idx) => {
     return progress[`${domain.id}-${idx}`];
+  };
+
+  // Function to start basic quiz
+  const startBasicQuiz = () => {
+    onStartQuiz(domain.id, 'basic');
+  };
+
+  // Function to start enhanced quiz
+  const startEnhancedQuiz = () => {
+    onStartQuiz(domain.id, 'enhanced');
   };
 
   return (
@@ -75,6 +85,27 @@ export default function DomainDetail({ domain, progress, onComplete, onBack }) {
           )}
         </div>
       ))}
+
+      {/* Quiz Buttons at the Bottom */}
+      <div style={{ marginTop: '32px', padding: '20px', backgroundColor: 'var(--card-bg)', borderRadius: '12px' }}>
+        <h3 style={{ marginBottom: '16px', textAlign: 'center' }}>Ready to Test Your Knowledge?</h3>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-primary"
+            onClick={startBasicQuiz}
+            style={{ padding: '12px 24px', fontSize: '1rem' }}
+          >
+            📝 Basic Quiz ({domain.topics.length} topics)
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={startEnhancedQuiz}
+            style={{ padding: '12px 24px', fontSize: '1rem' }}
+          >
+            🎮 Enhanced Quiz ({domain.topics.length} topics)
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -11,6 +11,16 @@ export default function Dashboard({ domains, getDomainProgress, onDomainSelect, 
     quizCount: questions.filter(q => q.domain === domain.id).length
   }));
 
+  // Function to start quiz in basic mode
+  const startBasicQuiz = (domainId) => {
+    onQuizSelect(domainId, 'basic');
+  };
+
+  // Function to start quiz in enhanced mode
+  const startEnhancedQuiz = (domainId) => {
+    onQuizSelect(domainId, 'enhanced');
+  };
+
   return (
     <div>
       <div className="content-header">
@@ -65,6 +75,20 @@ export default function Dashboard({ domains, getDomainProgress, onDomainSelect, 
                 style={{ width: `${domain.progress}%` }}
               />
             </div>
+            <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+              <button
+                className="btn btn-small btn-primary"
+                onClick={(e) => { e.stopPropagation(); startBasicQuiz(domain.id); }}
+              >
+                📝 Basic Quiz
+              </button>
+              <button
+                className="btn btn-small btn-secondary"
+                onClick={(e) => { e.stopPropagation(); startEnhancedQuiz(domain.id); }}
+              >
+                🎮 Enhanced Quiz
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -74,7 +98,7 @@ export default function Dashboard({ domains, getDomainProgress, onDomainSelect, 
         <div
           className="stat-box"
           style={{ cursor: 'pointer' }}
-          onClick={() => onQuizSelect('all')}
+          onClick={() => onQuizSelect('all', 'basic')}
         >
           <div className="stat-title">🏆 Full Mock Exam</div>
           <div className="stat-value">{totalQuestions}</div>
@@ -85,7 +109,7 @@ export default function Dashboard({ domains, getDomainProgress, onDomainSelect, 
             key={`qs-${domain.id}`}
             className="stat-box"
             style={{ cursor: 'pointer' }}
-            onClick={() => onQuizSelect(domain.id)}
+            onClick={() => onQuizSelect(domain.id, 'basic')}
           >
             <div className="stat-title">{domain.icon} {domain.title}</div>
             <div className="stat-value">{domain.quizCount}</div>
@@ -96,3 +120,4 @@ export default function Dashboard({ domains, getDomainProgress, onDomainSelect, 
     </div>
   );
 }
+

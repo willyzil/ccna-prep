@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import DomainDetail from './components/DomainDetail';
 import Quiz from './components/Quiz';
+import EnhancedQuiz from './components/EnhancedQuiz';
 import { getProgress, saveProgress } from './utils/storage';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
   const [selectedDomain, setSelectedDomain] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [progress, setProgress] = useState(getProgress());
+  const [quizMode, setQuizMode] = useState('basic'); // 'basic' or 'enhanced'
 
   useEffect(() => {
     saveProgress(progress);
@@ -38,7 +40,8 @@ function App() {
     setSidebarOpen(false);
   };
 
-  const handleQuizSelect = (domainId) => {
+  const handleQuizSelect = (domainId, mode = 'basic') => {
+    setQuizMode(mode);
     setSelectedDomain(domainId);
     setCurrentView('quiz');
     setSidebarOpen(false);
@@ -73,9 +76,20 @@ function App() {
             progress={progress}
             onComplete={markTopicComplete}
             onBack={handleNavBack}
+            onStartQuiz={handleQuizSelect}
           />
         );
       case 'quiz':
+        // Use the enhanced quiz component if in 'enhanced' mode
+        if (quizMode === 'enhanced') {
+          return (
+            <EnhancedQuiz
+              domainId={selectedDomain}
+              questions={questions}
+              onBack={handleNavBack}
+            />
+          );
+        }
         return (
           <Quiz
             domainId={selectedDomain}
@@ -118,3 +132,4 @@ function App() {
 }
 
 export default App;
+

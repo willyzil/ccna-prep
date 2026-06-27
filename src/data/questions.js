@@ -1208,11 +1208,43 @@ export const questions = [
     explanation: "'git commit' saves staged changes to the local repository with a commit message. 'git add' stages changes, 'git push' sends commits to remote, 'git merge' combines branches."
   },
   {
-    domain: 6,
-    topic: "NETCONF, RESTCONF & Configuration Management",
-    question: "RESTCONF compared to NETCONF uses which transport protocol?",
-    options: ["SSH", "HTTPS", "Telnet", "SMTP"],
-    correct: 1,
-    explanation: "RESTCONF uses HTTPS (port 443). NETCONF uses SSH (port 830). RESTCONF is the REST-based alternative to NETCONF, supporting JSON or XML."
-  },
-];
+      domain: 6,
+      topic: "NETCONF, RESTCONF & Configuration Management",
+      question: "RESTCONF compared to NETCONF uses which transport protocol?",
+      options: ["SSH", "HTTPS", "Telnet", "SMTP"],
+      correct: 1,
+      explanation: "RESTCONF uses HTTPS (port 443). NETCONF uses SSH (port 830). RESTCONF is the REST-based alternative to NETCONF, supporting JSON or XML."
+    },
+    {
+      domain: 5,
+      topic: "Network Security Threats & Mitigation",
+      question: "Which malware type is self-replicating and spreads across networks without user interaction?",
+      options: ["Virus", "Worm", "Trojan", "Rootkit"],
+      correct: 1,
+      explanation: "A Worm is self-replicating and spreads independently across networks. A Virus requires a host program and user interaction."
+    },
+    {
+      domain: 5,
+      topic: "Network Security Threats & Mitigation",
+      question: "What distinguishes a DDoS attack from a standard DoS attack?",
+      options: ["DDoS uses a single compromised device", "DDoS originates from multiple distributed sources", "DoS only targets wireless networks", "DDoS is slower but more powerful"],
+      correct: 1,
+      explanation: "DDoS (Distributed Denial of Service) uses multiple distributed sources (often a botnet) to overwhelm a target, making it harder to mitigate than a single-source DoS."
+    },
+    {
+      domain: 5,
+      topic: "Network Security Threats & Mitigation",
+      question: "Phishing is primarily a threat to which aspect of security?",
+      options: ["Technical encryption", "Network segmentation", "Human users", "Firewall rules"],
+      correct: 2,
+      explanation: "Phishing is a social engineering attack that targets human users to steal credentials or sensitive information, usually via deceptive emails."
+    },
+    {
+      domain: 5,
+      topic: "Network Security Threats & Mitigation",
+      question: "Which security measure limits lateral movement in case of a breach?",
+      options: ["Network segmentation", "Increasing bandwidth", "Disabling SNMP", "Using DHCP"],
+      correct: 0,
+      explanation: "Network segmentation divides the network into smaller parts, containing breaches and limiting lateral movement by attackers."
+    },
+  ];

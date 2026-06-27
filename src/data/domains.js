@@ -2161,6 +2161,43 @@ Encrypts management frames to prevent deauth attacks.
 - Rogue AP detection is a **WLC function**
 - The **4-way handshake** is what attackers capture for offline cracking
 `
+      },
+      {
+        title: "Network Security Threats & Mitigation",
+        content: `
+## Common Network Threats
+
+### Malware
+- **Virus**: Attaches to executable, requires user interaction.
+- **Worm**: Self-replicating, spreads across networks without user interaction.
+- **Trojan**: Disguised as legitimate software, creates backdoors.
+- **Ransomware**: Encrypts data, demands payment for decryption.
+- **Rootkit**: Hides deep in the OS, masks its presence.
+- **Botnet**: Network of compromised devices (bots) controlled by a C&C server.
+
+### Attacks
+- **DoS (Denial of Service)**: Overwhelms a system with traffic.
+- **DDoS (Distributed DoS)**: DoS from multiple sources (often a botnet).
+- **MITM (Man-in-the-Middle)**: Attacker intercepts communication between two parties.
+- **Phishing**: Social engineering via email to steal credentials.
+- **Evil Twin**: Rogue AP mimicking legitimate SSID.
+- **MAC Spoofing**: Changing MAC address to impersonate a device.
+
+### Mitigation Strategies
+- **Firewalls**: Filter traffic based on rules.
+- **IDS/IPS**: Intrusion Detection/Prevention Systems.
+- **Antivirus/Anti-malware**: Detect and remove malicious software.
+- **User Education**: Prevent phishing and social engineering.
+- **Patch Management**: Keep systems updated to fix vulnerabilities.
+- **Network Segmentation**: Limit lateral movement.
+- **Strong Authentication**: MFA, strong passwords, 802.1X.
+
+## Exam Tips
+- Know the difference between **Worm** (spreads itself) and **Virus** (needs host program).
+- **DDoS** is harder to mitigate than DoS due to distributed sources.
+- **Phishing** targets humans, not technology.
+- **Evil Twin** is a wireless attack specifically.
+`
       }
     ]
   },
