@@ -22,14 +22,16 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
   const [wrongAnswers, setWrongAnswers] = useState([]);
   const [showHint, setShowHint] = useState(false);
 
-  // Refs to avoid stale closures in interval
-  const wrongAnswersRef = useRef([]);
-  const isCompleteRef = useRef(false);
-  const timerRunningRef = useRef(false);
+  const timerRef = useRef(null);
 
-  useEffect(() => { wrongAnswersRef.current = wrongAnswers; }, [wrongAnswers]);
-  useEffect(() => { isCompleteRef.current = isComplete; }, [isComplete]);
-  useEffect(() => { timerRunningRef.current = timerRunning; }, [timerRunning]);
+  const shuffleArray = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
 
   const resetQuiz = useCallback(() => {
     let filtered;
@@ -41,7 +43,7 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     if (reviewMode && wrongAnswers.length > 0) {
       filtered = allQuestions.filter(q => wrongAnswers.some(wa => wa.question === q.question));
     }
-    filtered = filtered.sort(() => Math.random() - 0.5);
+    filtered = shuffleArray(filtered);
     setQuizQuestions(filtered);
     setCurrentQ(0);
     setSelectedAnswer(null);
@@ -62,39 +64,20 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     resetQuiz();
   }, [resetQuiz]);
 
-  // Timer — single interval, no recreate on isComplete
-  const timerRef = useRef(null);
-  const timeLeftRef = useRef(timeLeft);
-
-  useEffect(() => {
-    timeLeftRef.current = timeLeft;
-  }, [timeLeft]);
-
+  // Timer — stable interval, no recreate on isComplete
   useEffect(() => {
     if (!timerActive || !timerRunning) {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       return;
     }
+    if (timeLeft <= 0) { setIsComplete(true); return; }
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-          setIsComplete(true);
-          return 0;
-        }
+        if (prev <= 1) { clearInterval(timerRef.current); timerRef.current = null; setIsComplete(true); return 0; }
         return prev - 1;
       });
     }, 1000);
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
+    return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
   }, [timerActive, timerRunning]);
 
   const showFeedback = (message, type) => {
@@ -115,13 +98,10 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
 
     const isCorrect = answerIdx === q.correct;
 
-    // Use functional updates to avoid stale closure on streak
     if (isCorrect) {
       setStreak(prev => {
         const newStreak = prev + 1;
-        if (newStreak > maxStreak) {
-          setMaxStreak(newStreak);
-        }
+        if (newStreak > maxStreak) setMaxStreak(newStreak);
         const pts = 10 + newStreak * 2;
         setPoints(p => p + pts);
         showFeedback(`Great! +${pts} points!`, 'success');
@@ -130,7 +110,6 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
       setScore(s => s + 1);
     } else {
       setStreak(0);
-      setPoints(p => p); // no-op to flush
       showFeedback('Incorrect. Keep trying!', 'error');
     }
 
@@ -166,13 +145,9 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     }
   };
 
-  const handleRestart = () => {
-    resetQuiz();
-  };
+  const handleRestart = () => { resetQuiz(); };
 
-  const toggleHint = () => {
-    setShowHint(prev => !prev);
-  };
+  const toggleHint = () => { setShowHint(prev => !prev); };
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -271,7 +246,7 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
                 className="btn btn-secondary"
                 onClick={() => {
                   const wrongOnly = allQuestions.filter(q => wrongAnswers.some(wa => wa.question === q.question));
-                  setQuizQuestions(wrongOnly.sort(() => Math.random() - 0.5));
+                  setQuizQuestions(shuffleArray(wrongOnly));
                   setReviewMode(true);
                   setCurrentQ(0);
                   setSelectedAnswer(null);

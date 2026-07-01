@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const TIMER_SECONDS = 60;
 
-export default function Quiz({ domainId, questions: allQuestions, onBack, mode = 'basic', bookmarks, onToggleBookmark, bookmarkedQuestions }) {
+export default function Quiz({ domainId, questions: allQuestions, onBack, mode = 'basic', bookmarks, onToggleBookmark }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -28,7 +28,12 @@ export default function Quiz({ domainId, questions: allQuestions, onBack, mode =
       const wrongQIds = wrongAnswers.map((a, i) => `${a.question.substring(0, 40)}-${wrongAnswers.indexOf(a)}`);
       filtered = allQuestions.filter(q => wrongAnswers.some(a => a.question === q.question));
     }
-    filtered = filtered.sort(() => Math.random() - 0.5);
+    const shuffled = [...filtered];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    filtered = shuffled;
     setQuizQuestions(filtered);
     setCurrentQ(0);
     setSelectedAnswer(null);
@@ -45,18 +50,22 @@ export default function Quiz({ domainId, questions: allQuestions, onBack, mode =
     resetQuiz();
   }, [resetQuiz]);
 
-  // Timer countdown
+  // Timer countdown — stable interval, no recreate on isComplete
+  const timerRef = useRef(null);
   useEffect(() => {
-    if (!timerActive || !timerRunning || isComplete) return;
-    if (timeLeft <= 0) {
-      setIsComplete(true);
+    if (!timerActive || !timerRunning) {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       return;
     }
-    const interval = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+    if (timeLeft <= 0) { setIsComplete(true); return; }
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) { clearInterval(timerRef.current); timerRef.current = null; setIsComplete(true); return 0; }
+        return prev - 1;
+      });
     }, 1000);
-    return () => clearInterval(interval);
-  }, [timerActive, timerRunning, isComplete, timeLeft]);
+    return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
+  }, [timerActive, timerRunning]);
 
   const handleAnswer = (answerIdx) => {
     if (showExplanation) return;
@@ -159,8 +168,14 @@ export default function Quiz({ domainId, questions: allQuestions, onBack, mode =
             )}
             {wrongAnswers.length > 0 && (
               <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => {
+                const wrongOnly = allQuestions.filter(q => wrongAnswers.some(wa => wa.question === q.question));
+                const shuffled = [...wrongOnly];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                  const j = Math.floor(Math.random() * (i + 1));
+                  [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
                 setReviewMode(true);
-                setQuizQuestions(allQuestions.filter(q => wrongAnswers.some(wa => wa.question === q.question)).sort(() => Math.random() - 0.5));
+                setQuizQuestions(shuffled);
                 setCurrentQ(0);
                 setSelectedAnswer(null);
                 setShowExplanation(false);

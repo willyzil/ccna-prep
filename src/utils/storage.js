@@ -49,7 +49,16 @@ export function getHistory() {
   if (!storageAvailable) return {};
   try {
     const saved = localStorage.getItem('ccna-prep-history');
-    return saved ? JSON.parse(saved) : {};
+    const history = saved ? JSON.parse(saved) : {};
+    // Prune entries older than 30 days
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const pruned = {};
+    for (const [date, data] of Object.entries(history)) {
+      if (new Date(date).getTime() >= cutoff) {
+        pruned[date] = data;
+      }
+    }
+    return pruned;
   } catch {
     return {};
   }
@@ -58,6 +67,14 @@ export function getHistory() {
 export function saveHistory(history) {
   if (!storageAvailable) return;
   try {
-    localStorage.setItem('ccna-prep-history', JSON.stringify(history));
+    // Prune before saving
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const pruned = {};
+    for (const [date, data] of Object.entries(history)) {
+      if (new Date(date).getTime() >= cutoff) {
+        pruned[date] = data;
+      }
+    }
+    localStorage.setItem('ccna-prep-history', JSON.stringify(pruned));
   } catch {}
 }
