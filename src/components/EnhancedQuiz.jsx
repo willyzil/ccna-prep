@@ -33,6 +33,11 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     return a;
   };
 
+  const wrongAnswersRef = useRef([]);
+  useEffect(() => {
+    wrongAnswersRef.current = wrongAnswers;
+  }, [wrongAnswers]);
+
   const resetQuiz = useCallback(() => {
     let filtered;
     if (domainId === 'all') {
@@ -40,8 +45,8 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     } else {
       filtered = allQuestions.filter(q => q.domain === domainId);
     }
-    if (reviewMode && wrongAnswers.length > 0) {
-      filtered = allQuestions.filter(q => wrongAnswers.some(wa => wa.question === q.question));
+    if (reviewMode && wrongAnswersRef.current.length > 0) {
+      filtered = allQuestions.filter(q => wrongAnswersRef.current.some(wa => wa.question === q.question));
     }
     filtered = shuffleArray(filtered);
     setQuizQuestions(filtered);
@@ -58,7 +63,7 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     setTimeLeft(TIMER_SECONDS);
     setTimerRunning(false);
     setShowHint(false);
-  }, [domainId, allQuestions, reviewMode, wrongAnswers]);
+  }, [domainId, allQuestions, reviewMode]);
 
   useEffect(() => {
     resetQuiz();

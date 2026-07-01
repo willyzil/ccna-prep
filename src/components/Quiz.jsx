@@ -17,6 +17,11 @@ export default function Quiz({ domainId, questions: allQuestions, onBack, mode =
   const [wrongAnswers, setWrongAnswers] = useState([]);
   const [showHint, setShowHint] = useState(false);
 
+  const wrongAnswersRef = useRef([]);
+  useEffect(() => {
+    wrongAnswersRef.current = wrongAnswers;
+  }, [wrongAnswers]);
+
   const resetQuiz = useCallback(() => {
     let filtered;
     if (domainId === 'all') {
@@ -24,9 +29,8 @@ export default function Quiz({ domainId, questions: allQuestions, onBack, mode =
     } else {
       filtered = allQuestions.filter(q => q.domain === domainId);
     }
-    if (reviewMode && wrongAnswers.length > 0) {
-      const wrongQIds = wrongAnswers.map((a, i) => `${a.question.substring(0, 40)}-${wrongAnswers.indexOf(a)}`);
-      filtered = allQuestions.filter(q => wrongAnswers.some(a => a.question === q.question));
+    if (reviewMode && wrongAnswersRef.current.length > 0) {
+      filtered = allQuestions.filter(q => wrongAnswersRef.current.some(a => a.question === q.question));
     }
     const shuffled = [...filtered];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -44,11 +48,9 @@ export default function Quiz({ domainId, questions: allQuestions, onBack, mode =
     setTimeLeft(TIMER_SECONDS);
     setTimerRunning(false);
     setShowHint(false);
-  }, [domainId, allQuestions, reviewMode, wrongAnswers]);
+  }, [domainId, allQuestions, reviewMode]);
 
-  useEffect(() => {
-    resetQuiz();
-  }, [resetQuiz]);
+  // Timer countdown — stable interval, no recreate on isComplete
 
   // Timer countdown — stable interval, no recreate on isComplete
   const timerRef = useRef(null);
