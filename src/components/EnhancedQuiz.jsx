@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const TIMER_SECONDS = 60;
 
-export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack, mode = 'basic', bookmarks, onToggleBookmark, bookmarkedQuestions }) {
+export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack, mode = 'basic', bookmarks, onToggleBookmark }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -21,6 +21,15 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
   const [reviewMode, setReviewMode] = useState(mode === 'review');
   const [wrongAnswers, setWrongAnswers] = useState([]);
   const [showHint, setShowHint] = useState(false);
+
+  // Refs to avoid stale closures in interval
+  const wrongAnswersRef = useRef([]);
+  const isCompleteRef = useRef(false);
+  const timerRunningRef = useRef(false);
+
+  useEffect(() => { wrongAnswersRef.current = wrongAnswers; }, [wrongAnswers]);
+  useEffect(() => { isCompleteRef.current = isComplete; }, [isComplete]);
+  useEffect(() => { timerRunningRef.current = timerRunning; }, [timerRunning]);
 
   const resetQuiz = useCallback(() => {
     let filtered;
@@ -53,18 +62,40 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     resetQuiz();
   }, [resetQuiz]);
 
-  // Timer countdown
+  // Timer — single interval, no recreate on isComplete
+  const timerRef = useRef(null);
+  const timeLeftRef = useRef(timeLeft);
+
   useEffect(() => {
-    if (!timerActive || !timerRunning || isComplete) return;
-    if (timeLeft <= 0) {
-      setIsComplete(true);
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
+  useEffect(() => {
+    if (!timerActive || !timerRunning) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       return;
     }
-    const interval = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+          setIsComplete(true);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
-    return () => clearInterval(interval);
-  }, [timerActive, timerRunning, isComplete, timeLeft]);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [timerActive, timerRunning]);
 
   const showFeedback = (message, type) => {
     setFeedback({ show: true, message, type });
@@ -75,41 +106,44 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     if (showExplanation) return;
     setSelectedAnswer(answerIdx);
     setShowExplanation(true);
-    if (timerActive && !timerRunning) setTimerRunning(true);
-    
-    const isCorrect = answerIdx === quizQuestions[currentQ].correct;
-    
-    // Calculate points based on streak and correctness
-    let pointsEarned = isCorrect ? 10 + (streak * 2) : 0;
+    if (timerActive && !timerRunning) {
+      setTimerRunning(true);
+    }
+
+    const q = quizQuestions[currentQ];
+    if (!q) return;
+
+    const isCorrect = answerIdx === q.correct;
+
+    // Use functional updates to avoid stale closure on streak
     if (isCorrect) {
       setStreak(prev => {
         const newStreak = prev + 1;
         if (newStreak > maxStreak) {
           setMaxStreak(newStreak);
         }
+        const pts = 10 + newStreak * 2;
+        setPoints(p => p + pts);
+        showFeedback(`Great! +${pts} points!`, 'success');
         return newStreak;
       });
-      setPoints(prev => prev + pointsEarned);
-      showFeedback(`Great! +${pointsEarned} points!`, 'success');
+      setScore(s => s + 1);
     } else {
       setStreak(0);
+      setPoints(p => p); // no-op to flush
       showFeedback('Incorrect. Keep trying!', 'error');
     }
 
     setAnswers(prev => [...prev, {
-      question: quizQuestions[currentQ].question,
+      question: q.question,
       selected: answerIdx,
-      correct: quizQuestions[currentQ].correct,
+      correct: q.correct,
       isCorrect,
-      domain: quizQuestions[currentQ].domain,
-      topic: quizQuestions[currentQ].topic
+      domain: q.domain,
+      topic: q.topic
     }]);
 
-    if (!isCorrect) {
-      setWrongAnswers(prev => [...prev, quizQuestions[currentQ]]);
-    } else {
-      setScore(prev => prev + 1);
-    }
+    setWrongAnswers(prev => isCorrect ? prev : [...prev, q]);
   };
 
   const handleNext = () => {
@@ -120,20 +154,11 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
       setShowHint(false);
     } else {
       setIsComplete(true);
-      // Award badges based on performance
       const percentage = quizQuestions.length > 0 ? (score / quizQuestions.length) * 100 : 0;
       const newBadges = [];
-      
-      if (percentage >= 90) {
-        newBadges.push({ id: 'perfect', name: 'Perfect Score', icon: '🏆' });
-      }
-      if (percentage >= 80) {
-        newBadges.push({ id: 'excellent', name: 'Excellent', icon: '⭐' });
-      }
-      if (maxStreak >= 3) {
-        newBadges.push({ id: 'streak', name: 'Streak Master', icon: '🔥' });
-      }
-      
+      if (percentage >= 90) newBadges.push({ id: 'perfect', name: 'Perfect Score', icon: '🏆' });
+      if (percentage >= 80) newBadges.push({ id: 'excellent', name: 'Excellent', icon: '⭐' });
+      if (maxStreak >= 3) newBadges.push({ id: 'streak', name: 'Streak Master', icon: '🔥' });
       if (newBadges.length > 0) {
         setBadges(prev => [...prev, ...newBadges]);
         showFeedback(`Earned ${newBadges.length} new badge${newBadges.length > 1 ? 's' : ''}!`, 'success');
@@ -164,7 +189,7 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showExplanation, isComplete, quizQuestions, currentQ]);
+  }, [showExplanation, isComplete]);
 
   if (quizQuestions.length === 0) {
     return (
@@ -177,20 +202,18 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
   if (isComplete) {
     const passed = (score / quizQuestions.length) >= 0.72;
     const percentage = quizQuestions.length > 0 ? Math.round((score / quizQuestions.length) * 100) : 0;
-    
+
     return (
       <div className="quiz-container">
-        {/* Feedback Notification */}
         {feedback.show && (
           <div className={`feedback-notification ${feedback.type}`}>
             <span style={{ marginRight: '8px' }}>{feedback.message}</span>
           </div>
         )}
-        
+
         <div className="results-card">
           <h1>Quiz Complete!</h1>
-          
-          {/* Score display with visual feedback */}
+
           <div className={`score-circle ${passed ? 'pass' : 'fail'}`}>
             <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{percentage}%</div>
             <div className="score-label">{passed ? 'PASSED' : 'NEEDS REVIEW'}</div>
@@ -199,12 +222,11 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
               <div>🔥 Best Streak: {maxStreak}</div>
             </div>
           </div>
-          
+
           <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
             {passed ? 'Great job! You have a solid understanding of this domain.' : 'Review the topics you missed and try again.'}
           </p>
-          
-          {/* Badges earned */}
+
           {badges.length > 0 && (
             <div style={{ marginBottom: '24px' }}>
               <h3 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>Badges Earned</h3>
@@ -218,7 +240,7 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
               </div>
             </div>
           )}
-          
+
           <div className="results-stats">
             <div className="stat-card">
               <div className="stat-value" style={{ color: 'var(--success)' }}>{score}</div>
@@ -240,20 +262,17 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
               <div className="stat-value" style={{ color: 'var(--warning)' }}>{maxStreak}</div>
               <div className="stat-label">Best Streak</div>
             </div>
-            <div className="stat-card">
-              <div className="stat-value" style={{ color: 'var(--text-secondary)' }}>🔥</div>
-              <div className="stat-label">Streak Bonus</div>
-            </div>
           </div>
-          
+
           {wrongAnswers.length > 0 && (
             <div style={{ marginBottom: '24px' }}>
               <h3 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>Wrong Answers ({wrongAnswers.length})</h3>
-              <button 
-                className="btn btn-secondary" 
+              <button
+                className="btn btn-secondary"
                 onClick={() => {
+                  const wrongOnly = allQuestions.filter(q => wrongAnswers.some(wa => wa.question === q.question));
+                  setQuizQuestions(wrongOnly.sort(() => Math.random() - 0.5));
                   setReviewMode(true);
-                  setQuizQuestions(allQuestions.filter(q => wrongAnswers.some(wa => wa.question === q.question)).sort(() => Math.random() - 0.5));
                   setCurrentQ(0);
                   setSelectedAnswer(null);
                   setShowExplanation(false);
@@ -264,13 +283,14 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
                   setMaxStreak(0);
                   setPoints(0);
                   setBadges([]);
+                  setWrongAnswers([]);
                 }}
               >
                 🔄 Study Wrong Answers ({wrongAnswers.length} questions)
               </button>
             </div>
           )}
-          
+
           <h3 style={{ margin: '32px 0 16px', color: 'var(--text-primary)' }}>Question Review</h3>
           {answers.map((ans, idx) => (
             <div key={idx} className="info-card" style={{ marginBottom: '12px', borderLeftColor: ans.isCorrect ? 'var(--success)' : 'var(--error)' }}>
@@ -283,7 +303,7 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
               </p>
             </div>
           ))}
-          
+
           <div style={{ marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={handleRestart}>Try Again</button>
             <button className="btn btn-secondary" onClick={onBack}>Back to Dashboard</button>
@@ -295,19 +315,16 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
 
   const q = quizQuestions[currentQ];
   const progressPercent = ((currentQ + 1) / quizQuestions.length) * 100;
-  const currentStreak = streak;
   const isBookmarked = bookmarks && bookmarks[`${q.domain}-${q.topic}`];
 
   return (
     <div className="quiz-container">
-      {/* Feedback Notification */}
       {feedback.show && (
         <div className={`feedback-notification ${feedback.type}`}>
           <span style={{ marginRight: '8px' }}>{feedback.message}</span>
         </div>
       )}
-      
-      {/* Timer display */}
+
       {timerActive && (
         <div style={{
           textAlign: 'center',
@@ -324,11 +341,9 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
           {!timerRunning && <span style={{ fontSize: '0.75rem', marginLeft: '8px', color: 'var(--text-muted)' }}>(Answer to start timer)</span>}
         </div>
       )}
-      
+
       <div className="quiz-header">
         <button className="btn btn-secondary" onClick={onBack} style={{ padding: '8px 16px' }}>← Exit</button>
-        
-        {/* Progress bar and streak */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, justifyContent: 'center' }}>
           <div className="quiz-progress-bar">
             <div className="quiz-progress-fill" style={{ width: `${progressPercent}%` }} />
@@ -337,29 +352,19 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
             {currentQ + 1} / {quizQuestions.length}
           </span>
         </div>
-        
-        {/* Points and Streak display */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="streak-display" style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px',
-            padding: '4px 8px',
-            borderRadius: '12px',
-            background: 'var(--accent)',
-            color: 'white'
+          <div className="streak-display" style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            padding: '4px 8px', borderRadius: '12px',
+            background: 'var(--accent)', color: 'white'
           }}>
             <span>🔥</span>
-            <span>{currentStreak}</span>
+            <span>{streak}</span>
           </div>
-          <div className="points-display" style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px',
-            padding: '4px 8px',
-            borderRadius: '12px',
-            background: 'var(--warning)',
-            color: 'white'
+          <div className="points-display" style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            padding: '4px 8px', borderRadius: '12px',
+            background: 'var(--warning)', color: 'white'
           }}>
             <span>⭐</span>
             <span>{points}</span>
@@ -370,8 +375,8 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
       <div className="question-card">
         <div className="q-number" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>Question {currentQ + 1} of {quizQuestions.length} — {q.topic}</span>
-          <button 
-            className="btn btn-secondary" 
+          <button
+            className="btn btn-secondary"
             onClick={() => onToggleBookmark && onToggleBookmark(`${q.domain}-${q.topic}`)}
             style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px' }}
           >
@@ -380,7 +385,6 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
         </div>
         <div className="q-text">{q.question}</div>
 
-        {/* Hint */}
         {showHint && (
           <div className="info-card" style={{ marginBottom: '12px', borderLeftColor: 'var(--warning)', background: 'var(--warning-light)' }}>
             <p style={{ fontSize: '0.85rem', color: 'var(--warning)', margin: 0 }}>💡 Hint: {q.explanation.split('. ').slice(0, 1).join('.')}</p>
@@ -457,7 +461,6 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
         )}
       </div>
 
-      {/* Keyboard shortcuts hint */}
       <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
         Keys: 1-4 = select answer | Enter/N = next | H = hint | Esc = exit
       </div>
