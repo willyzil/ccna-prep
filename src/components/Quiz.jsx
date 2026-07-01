@@ -27,7 +27,7 @@ export default function Quiz({ domainId, questions: allQuestions, onBack, mode =
     if (domainId === 'all') {
       filtered = [...allQuestions];
     } else {
-      filtered = allQuestions.filter(q => q.domain === domainId);
+      filtered = allQuestions.filter(q => q.domain == domainId);
     }
     if (reviewMode && wrongAnswersRef.current.length > 0) {
       filtered = allQuestions.filter(q => wrongAnswersRef.current.some(a => a.question === q.question));
@@ -50,7 +50,9 @@ export default function Quiz({ domainId, questions: allQuestions, onBack, mode =
     setShowHint(false);
   }, [domainId, allQuestions, reviewMode]);
 
-  // Timer countdown — stable interval, no recreate on isComplete
+  useEffect(() => {
+    resetQuiz();
+  }, [resetQuiz]);
 
   // Timer countdown — stable interval, no recreate on isComplete
   const timerRef = useRef(null);

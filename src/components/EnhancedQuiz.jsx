@@ -43,7 +43,7 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
     if (domainId === 'all') {
       filtered = [...allQuestions];
     } else {
-      filtered = allQuestions.filter(q => q.domain === domainId);
+      filtered = allQuestions.filter(q => q.domain == domainId);
     }
     if (reviewMode && wrongAnswersRef.current.length > 0) {
       filtered = allQuestions.filter(q => wrongAnswersRef.current.some(wa => wa.question === q.question));
