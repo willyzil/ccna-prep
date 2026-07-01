@@ -136,6 +136,7 @@ export default function EnhancedQuiz({ domainId, questions: allQuestions, onBack
       setSelectedAnswer(null);
       setShowExplanation(false);
       setShowHint(false);
+      setTimeLeft(TIMER_SECONDS);
     } else {
       setIsComplete(true);
       const percentage = quizQuestions.length > 0 ? (score / quizQuestions.length) * 100 : 0;
