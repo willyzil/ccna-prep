@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
-export default function Quiz({ domainId, questions: allQuestions, onBack }) {
+const TIMER_SECONDS = 60;
+
+export default function Quiz({ domainId, questions: allQuestions, onBack, mode = 'basic', bookmarks, onToggleBookmark, bookmarkedQuestions }) {
   const [currentQ, setCurrentQ] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -8,31 +10,75 @@ export default function Quiz({ domainId, questions: allQuestions, onBack }) {
   const [answers, setAnswers] = useState([]);
   const [isComplete, setIsComplete] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState([]);
+  const [timerActive, setTimerActive] = useState(mode === 'timer');
+  const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [reviewMode, setReviewMode] = useState(mode === 'review');
+  const [wrongAnswers, setWrongAnswers] = useState([]);
+  const [showHint, setShowHint] = useState(false);
 
-  useEffect(() => {
+  const resetQuiz = useCallback(() => {
     let filtered;
     if (domainId === 'all') {
       filtered = [...allQuestions];
     } else {
       filtered = allQuestions.filter(q => q.domain === domainId);
     }
-    // Shuffle
+    if (reviewMode && wrongAnswers.length > 0) {
+      const wrongQIds = wrongAnswers.map((a, i) => `${a.question.substring(0, 40)}-${wrongAnswers.indexOf(a)}`);
+      filtered = allQuestions.filter(q => wrongAnswers.some(a => a.question === q.question));
+    }
     filtered = filtered.sort(() => Math.random() - 0.5);
     setQuizQuestions(filtered);
-  }, [domainId, allQuestions]);
+    setCurrentQ(0);
+    setSelectedAnswer(null);
+    setShowExplanation(false);
+    setScore(0);
+    setAnswers([]);
+    setIsComplete(false);
+    setTimeLeft(TIMER_SECONDS);
+    setTimerRunning(false);
+    setShowHint(false);
+  }, [domainId, allQuestions, reviewMode, wrongAnswers]);
+
+  useEffect(() => {
+    resetQuiz();
+  }, [resetQuiz]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (!timerActive || !timerRunning || isComplete) return;
+    if (timeLeft <= 0) {
+      setIsComplete(true);
+      return;
+    }
+    const interval = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timerActive, timerRunning, isComplete, timeLeft]);
 
   const handleAnswer = (answerIdx) => {
     if (showExplanation) return;
     setSelectedAnswer(answerIdx);
     setShowExplanation(true);
+    if (timerActive && !timerRunning) setTimerRunning(true);
+    
     const isCorrect = answerIdx === quizQuestions[currentQ].correct;
     setAnswers(prev => [...prev, {
       question: quizQuestions[currentQ].question,
       selected: answerIdx,
       correct: quizQuestions[currentQ].correct,
-      isCorrect
+      isCorrect,
+      domain: quizQuestions[currentQ].domain,
+      topic: quizQuestions[currentQ].topic
     }]);
-    if (isCorrect) setScore(prev => prev + 1);
+    
+    if (!isCorrect) {
+      setWrongAnswers(prev => [...prev, quizQuestions[currentQ]]);
+    } else {
+      setScore(prev => prev + 1);
+    }
   };
 
   const handleNext = () => {
@@ -40,19 +86,36 @@ export default function Quiz({ domainId, questions: allQuestions, onBack }) {
       setCurrentQ(prev => prev + 1);
       setSelectedAnswer(null);
       setShowExplanation(false);
+      setShowHint(false);
     } else {
       setIsComplete(true);
     }
   };
 
   const handleRestart = () => {
-    setCurrentQ(0);
-    setSelectedAnswer(null);
-    setShowExplanation(false);
-    setScore(0);
-    setAnswers([]);
-    setIsComplete(false);
+    resetQuiz();
   };
+
+  const toggleHint = () => {
+    setShowHint(prev => !prev);
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key >= '1' && e.key <= '4' && !showExplanation && !isComplete) {
+        handleAnswer(parseInt(e.key) - 1);
+      } else if ((e.key === 'Enter' || e.key === 'n') && showExplanation && !isComplete) {
+        handleNext();
+      } else if (e.key === 'h' || e.key === 'H') {
+        toggleHint();
+      } else if (e.key === 'Escape') {
+        onBack();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showExplanation, isComplete, quizQuestions, currentQ]);
 
   if (quizQuestions.length === 0) {
     return (
@@ -88,6 +151,27 @@ export default function Quiz({ domainId, questions: allQuestions, onBack }) {
               <div className="stat-value">{quizQuestions.length}</div>
               <div className="stat-label">Total Questions</div>
             </div>
+            {timerActive && (
+              <div className="stat-card">
+                <div className="stat-value">{TIMER_SECONDS - timeLeft}s</div>
+                <div className="stat-label">Time Used</div>
+              </div>
+            )}
+            {wrongAnswers.length > 0 && (
+              <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => {
+                setReviewMode(true);
+                setQuizQuestions(allQuestions.filter(q => wrongAnswers.some(wa => wa.question === q.question)).sort(() => Math.random() - 0.5));
+                setCurrentQ(0);
+                setSelectedAnswer(null);
+                setShowExplanation(false);
+                setScore(0);
+                setAnswers([]);
+                setIsComplete(false);
+              }}>
+                <div className="stat-value" style={{ color: 'var(--warning)' }}>🔄</div>
+                <div className="stat-label">Review {wrongAnswers.length} Wrong</div>
+              </div>
+            )}
           </div>
           <h3 style={{ margin: '32px 0 16px', color: 'var(--text-primary)' }}>Question Review</h3>
           {answers.map((ans, idx) => (
@@ -96,13 +180,18 @@ export default function Quiz({ domainId, questions: allQuestions, onBack }) {
                 {idx + 1}. {ans.question}
               </p>
               <p style={{ fontSize: '0.85rem', color: ans.isCorrect ? 'var(--success)' : 'var(--error)' }}>
-                Your answer: {ans.question.split('?')[0] ? ans.selected : 'N/A'}
-                {!ans.isCorrect && ` | Correct: ${ans.correct}`}
+                Your answer: {ans.selected !== undefined ? String.fromCharCode(65 + ans.selected) : 'N/A'}
+                {!ans.isCorrect && ` | Correct: ${String.fromCharCode(65 + ans.correct)}`}
               </p>
             </div>
           ))}
-          <div style={{ marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <div style={{ marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={handleRestart}>Try Again</button>
+            <button className="btn btn-secondary" onClick={() => {
+              setReviewMode(false);
+              setWrongAnswers([]);
+              resetQuiz();
+            }}>Study Wrong Answers</button>
             <button className="btn btn-secondary" onClick={onBack}>Back to Dashboard</button>
           </div>
         </div>
@@ -112,9 +201,28 @@ export default function Quiz({ domainId, questions: allQuestions, onBack }) {
 
   const q = quizQuestions[currentQ];
   const progressPercent = ((currentQ + 1) / quizQuestions.length) * 100;
+  const isBookmarked = bookmarks && bookmarks[`${q.domain}-${q.topic}`];
 
   return (
     <div className="quiz-container">
+      {/* Timer display */}
+      {timerActive && (
+        <div style={{
+          textAlign: 'center',
+          padding: '8px 16px',
+          marginBottom: '12px',
+          borderRadius: '8px',
+          background: timeLeft <= 10 ? 'var(--error-light)' : timeLeft <= 30 ? 'var(--warning-light)' : 'var(--bg-card)',
+          border: `1px solid ${timeLeft <= 10 ? 'var(--error)' : timeLeft <= 30 ? 'var(--warning)' : 'var(--border)'}`,
+          color: timeLeft <= 10 ? 'var(--error)' : timeLeft <= 30 ? 'var(--warning)' : 'var(--text-primary)',
+          fontWeight: 'bold',
+          fontSize: '1.1rem'
+        }}>
+          ⏱ {timeLeft}s remaining
+          {!timerRunning && <span style={{ fontSize: '0.75rem', marginLeft: '8px', color: 'var(--text-muted)' }}>(Answer to start timer)</span>}
+        </div>
+      )}
+
       <div className="quiz-header">
         <button className="btn btn-secondary" onClick={onBack} style={{ padding: '8px 16px' }}>← Exit</button>
         <div className="quiz-progress-bar">
@@ -126,10 +234,24 @@ export default function Quiz({ domainId, questions: allQuestions, onBack }) {
       </div>
 
       <div className="question-card">
-        <div className="q-number">
-          Question {currentQ + 1} of {quizQuestions.length} — {q.topic}
+        <div className="q-number" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Question {currentQ + 1} of {quizQuestions.length} — {q.topic}</span>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => onToggleBookmark && onToggleBookmark(`${q.domain}-${q.topic}`)}
+            style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px' }}
+          >
+            {isBookmarked ? '★ Bookmarked' : '☆ Bookmark'}
+          </button>
         </div>
         <div className="q-text">{q.question}</div>
+
+        {/* Hint */}
+        {showHint && (
+          <div className="info-card" style={{ marginBottom: '12px', borderLeftColor: 'var(--warning)', background: 'var(--warning-light)' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--warning)', margin: 0 }}>💡 Hint: {q.explanation.split('. ').slice(0, 1).join('.')}</p>
+          </div>
+        )}
 
         {q.options.map((option, idx) => {
           let className = 'answer-option';
@@ -169,6 +291,7 @@ export default function Quiz({ domainId, questions: allQuestions, onBack }) {
               }}>
                 {String.fromCharCode(65 + idx)}
               </span>
+              <span style={{ flex: 1 }}>[{idx + 1}]</span>
               {option}
               {showExplanation && idx === q.correct && <span style={{ float: 'right', color: 'var(--success)' }}>✓</span>}
               {showExplanation && idx === selectedAnswer && idx !== q.correct && <span style={{ float: 'right', color: 'var(--error)' }}>✗</span>}
@@ -185,14 +308,24 @@ export default function Quiz({ domainId, questions: allQuestions, onBack }) {
       </div>
 
       <div className="quiz-actions">
-        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-          Score: {score}/{currentQ + (showExplanation ? 1 : 0)}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+            Score: {score}/{currentQ + (showExplanation ? 1 : 0)}
+          </span>
+          <button className="btn btn-secondary" onClick={toggleHint} style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
+            {showHint ? 'Hide Hint' : 'Show Hint'}
+          </button>
         </div>
         {showExplanation && (
           <button className="btn btn-primary" onClick={handleNext}>
             {currentQ + 1 >= quizQuestions.length ? 'See Results' : 'Next Question →'}
           </button>
         )}
+      </div>
+
+      {/* Keyboard shortcuts hint */}
+      <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+        Keys: 1-4 = select answer | Enter/N = next | H = hint | Esc = exit
       </div>
     </div>
   );

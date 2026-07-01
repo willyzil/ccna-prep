@@ -1208,43 +1208,171 @@ export const questions = [
     explanation: "'git commit' saves staged changes to the local repository with a commit message. 'git add' stages changes, 'git push' sends commits to remote, 'git merge' combines branches."
   },
   {
-      domain: 6,
-      topic: "NETCONF, RESTCONF & Configuration Management",
-      question: "RESTCONF compared to NETCONF uses which transport protocol?",
-      options: ["SSH", "HTTPS", "Telnet", "SMTP"],
-      correct: 1,
-      explanation: "RESTCONF uses HTTPS (port 443). NETCONF uses SSH (port 830). RESTCONF is the REST-based alternative to NETCONF, supporting JSON or XML."
-    },
-    {
-      domain: 5,
-      topic: "Network Security Threats & Mitigation",
-      question: "Which malware type is self-replicating and spreads across networks without user interaction?",
-      options: ["Virus", "Worm", "Trojan", "Rootkit"],
-      correct: 1,
-      explanation: "A Worm is self-replicating and spreads independently across networks. A Virus requires a host program and user interaction."
-    },
-    {
-      domain: 5,
-      topic: "Network Security Threats & Mitigation",
-      question: "What distinguishes a DDoS attack from a standard DoS attack?",
-      options: ["DDoS uses a single compromised device", "DDoS originates from multiple distributed sources", "DoS only targets wireless networks", "DDoS is slower but more powerful"],
-      correct: 1,
-      explanation: "DDoS (Distributed Denial of Service) uses multiple distributed sources (often a botnet) to overwhelm a target, making it harder to mitigate than a single-source DoS."
-    },
-    {
-      domain: 5,
-      topic: "Network Security Threats & Mitigation",
-      question: "Phishing is primarily a threat to which aspect of security?",
-      options: ["Technical encryption", "Network segmentation", "Human users", "Firewall rules"],
-      correct: 2,
-      explanation: "Phishing is a social engineering attack that targets human users to steal credentials or sensitive information, usually via deceptive emails."
-    },
-    {
-      domain: 5,
-      topic: "Network Security Threats & Mitigation",
-      question: "Which security measure limits lateral movement in case of a breach?",
-      options: ["Network segmentation", "Increasing bandwidth", "Disabling SNMP", "Using DHCP"],
-      correct: 0,
-      explanation: "Network segmentation divides the network into smaller parts, containing breaches and limiting lateral movement by attackers."
-    },
+    domain: 6,
+    topic: "NETCONF, RESTCONF & Configuration Management",
+    question: "RESTCONF compared to NETCONF uses which transport protocol?",
+    options: ["SSH", "HTTPS", "Telnet", "SMTP"],
+    correct: 1,
+    explanation: "RESTCONF uses HTTPS (port 443). NETCONF uses SSH (port 830). RESTCONF is the REST-based alternative to NETCONF, supporting JSON or XML."
+  },
+  {
+    domain: 6,
+    topic: "REST APIs & HTTP",
+    question: "What does the PATCH HTTP method do in a REST API?",
+    options: ["Deletes a resource", "Replaces the entire resource", "Partially updates a resource", "Creates a new resource"],
+    correct: 2,
+    explanation: "PATCH only modifies specific fields in an existing resource, unlike PUT which replaces the entire resource."
+  },
+  {
+    domain: 6,
+    topic: "REST APIs & HTTP",
+    question: "An API returns status 403. What does this mean?",
+    options: ["The resource was not found", "Authentication failed", "Authenticated but not permitted to access the resource", "The server is overloaded"],
+    correct: 2,
+    explanation: "403 Forbidden means the client is authenticated but lacks permission to access the resource. 401 = needs auth, 404 = not found, 503 = server overloaded."
+  },
+  {
+    domain: 6,
+    topic: "REST APIs & HTTP",
+    question: "Which HTTP method is idempotent?",
+    options: ["POST", "GET", "PATCH", "Both GET and PUT"],
+    correct: 3,
+    explanation: "GET, PUT, DELETE, and PATCH are idempotent — calling them multiple times has the same effect as calling once. POST is NOT idempotent."
+  },
+  {
+    domain: 6,
+    topic: "SDN & Controller-Based Networking",
+    question: "What separates the control plane from the data plane in SDN?",
+    options: ["A firewall", "Centralized controller with programmable interfaces", "A hardware appliance", "Manual configuration"],
+    correct: 1,
+    explanation: "SDN decouples the control plane (decision-making) from the data plane (packet forwarding). A centralized controller manages the network using programmable APIs."
+  },
+  {
+    domain: 6,
+    topic: "SDN & Controller-Based Networking",
+    question: "What does 'intent-based networking' mean?",
+    options: ["Configuring each device manually", "Admins specify desired outcome and system handles configuration", "Using CLI commands exclusively", "A backup protocol for networks"],
+    correct: 1,
+    explanation: "Intent-based networking lets admins declare the desired state/outcome, and the SDN controller automatically translates it into device configurations."
+  },
+  {
+    domain: 6,
+    topic: "SDN & Controller-Based Networking",
+    question: "In Cisco ACI, what is a 'tenant'?",
+    options: ["A physical server", "A logical container for network policy and configuration", "A type of switch", "A routing protocol"],
+    correct: 1,
+    explanation: "In Cisco ACI, a tenant is a logical container that holds all network policy and configuration for a specific application or department, enabling multi-tenancy."
+  },
+  {
+    domain: 6,
+    topic: "NETCONF, RESTCONF & Configuration Management",
+    question: "What is the purpose of the NETCONF 'candidate' datastore?",
+    options: ["Stores the active running config", "Provides a staging area for proposed changes before applying", "Stores backup configurations from previous boots", "Holds temporary DHCP leases"],
+    correct: 1,
+    explanation: "The 'candidate' datastore allows administrators to make changes in a staging area, then commit them to 'running' when ready — enabling atomic config changes."
+  },
+  {
+    domain: 6,
+    topic: "Data Formats — JSON, YAML & XML",
+    question: "In JSON, how do you represent a null/empty value?",
+    options: ["empty string \"\"", "null", "undefined", "0"],
+    correct: 1,
+    explanation: "JSON uses the literal 'null' to represent an empty/missing value. It is distinct from 0, empty string, or false."
+  },
+  {
+    domain: 6,
+    topic: "Data Formats — JSON, YAML & XML",
+    question: "Which JSON data type would hold a true/false value?",
+    options: ["string", "number", "boolean", "object"],
+    correct: 2,
+    explanation: "JSON has 6 primitive data types: string, number, boolean (true/false), null, array, and object. true and false are boolean values."
+  },
+  {
+    domain: 6,
+    topic: "Data Formats — JSON, YAML & XML",
+    question: "How do you represent a multi-line string in JSON?",
+    options: ["Use triple quotes", "Use \\n escape sequences in a single string", "Use XML CDATA", "Use YAML literal block notation"],
+    correct: 1,
+    explanation: "JSON strings must be on a single line. Multi-line content uses escape sequences like \\n (newline). YAML has native multi-line support but JSON does not."
+  },
+  {
+    domain: 5,
+    topic: "Network Security Threats & Mitigation",
+    question: "What is a 'zero-day' vulnerability?",
+    options: ["A vulnerability that lasts only one day", "A vulnerability unknown to the vendor with no patch available", "A vulnerability found in day-zero of a product launch", "A vulnerability that affects zero devices"],
+    correct: 1,
+    explanation: "A zero-day vulnerability is one that is unknown to the software vendor and has no available patch. Attackers exploit it before the vendor can develop a fix."
+  },
+  {
+    domain: 5,
+    topic: "Network Security Threats & Mitigation",
+    question: "Which attack involves intercepting communication between two parties?",
+    options: ["DDoS", "Man-in-the-middle (MitM)", "Buffer overflow", "SQL injection"],
+    correct: 1,
+    explanation: "A man-in-the-middle (MitM) attack intercepts and potentially alters communication between two parties who believe they are directly communicating."
+  },
+  {
+    domain: 5,
+    topic: "Network Security Threats & Mitigation",
+    question: "What is the primary defense against DNS spoofing?",
+    options: ["Disable DNS", "DNSSEC (DNS Security Extensions)", "Use public Wi-Fi", "Enable DHCP snooping"],
+    correct: 1,
+    explanation: "DNSSEC adds cryptographic signatures to DNS records, allowing clients to verify that DNS responses are authentic and haven't been tampered with."
+  },
+  {
+    domain: 5,
+    topic: "Wireless Security",
+    question: "What is the minimum WPA2 key length for a strong passphrase?",
+    options: ["4 characters", "8 characters", "12 characters", "16 characters"],
+    correct: 1,
+    explanation: "WPA2-Personal requires a minimum of 8 characters (up to 63). While 8 is the minimum, longer passphrases (12+) are recommended for stronger security."
+  },
+  {
+    domain: 5,
+    topic: "Device Hardening",
+    question: "What does 'banner login' display on a Cisco device?",
+    options: ["A message after login", "A legal warning before login", "Device configuration details", "System uptime information"],
+    correct: 1,
+    explanation: "'banner login' displays a legal warning or notice that users must see before they can log in. It is used for legal protection and user awareness."
+  },
+  {
+    domain: 5,
+    topic: "AAA, RADIUS & TACACS+",
+    question: "TACACS+ separates which three security functions?",
+    options: ["Encryption, Decryption, Key Exchange", "Authentication, Authorization, Accounting", "Discovery, Offer, Request", "Routing, Switching, Bridging"],
+    correct: 1,
+    explanation: "TACACS+ separates Authentication (who you are), Authorization (what you can do), and Accounting (what you did). This allows granular control — unlike RADIUS which combines authN and authZ."
+  },
+  {
+    domain: 5,
+    topic: "AAA, RADIUS & TACACS+",
+    question: "What does 'aaa authorization exec' do?",
+    options: ["Enables encryption for AAA", "Requires authorization before granting exec shell access", "Sets the exec timeout", "Configures AAA accounting"],
+    correct: 1,
+    explanation: "'aaa authorization exec' requires users to be authorized before being granted an executive shell session. It works with RADIUS/TACACS+ to control who can access privileged EXEC mode."
+  },
+  {
+    domain: 5,
+    topic: "VPN Concepts",
+    question: "What are the two phases of IPsec/IKE negotiation?",
+    options: ["Phase 1: encryption, Phase 2: decryption", "Phase 1: IKE SA establishment, Phase 2: IPsec SA establishment", "Phase 1: authentication, Phase 2: routing", "Phase 1: key exchange, Phase 2: packet forwarding"],
+    correct: 1,
+    explanation: "IKE Phase 1 establishes an IKE Security Association (encrypts the IKE channel). Phase 2 establishes IPsec SAs (encrypts actual data) within the secure IKE channel."
+  },
+  {
+    domain: 5,
+    topic: "Network Security Threats & Mitigation",
+    question: "Which tool is used to detect and prevent unauthorized network access?",
+    options: ["IDS/IPS (Intrusion Detection/Prevention System)", "DHCP server", "NTP server", "DNS resolver"],
+    correct: 0,
+    explanation: "An IDS detects suspicious activity and alerts, while an IPS actively blocks/prevents it. Both monitor network traffic for known attack patterns and anomalies."
+  },
+  {
+    domain: 5,
+    topic: "Network Security Threats & Mitigation",
+    question: "What is 'social engineering' in cybersecurity?",
+    options: ["Engineering social media posts", "Manipulating people to reveal confidential information", "A type of network protocol", "Automated security testing"],
+    correct: 1,
+    explanation: "Social engineering exploits human psychology to trick people into revealing sensitive information or performing actions that compromise security. Examples: phishing, pretexting, baiting."
+  }
   ];

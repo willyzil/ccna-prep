@@ -1,6 +1,12 @@
 import React from 'react';
 
-export default function Sidebar({ currentView, selectedDomain, domains, getDomainProgress, onDomainSelect, onQuizSelect, onSelectDashboard, overallProgress, sidebarOpen }) {
+export default function Sidebar({ currentView, selectedDomain, domains, getDomainProgress, onDomainSelect, onQuizSelect, onSelectDashboard, overallProgress, sidebarOpen, totalBookmarks = 0, bookmarks = {} }) {
+  const bookmarkCount = Object.keys(bookmarks).filter(k => bookmarks[k]).length;
+  
+  const handleBookmarkReview = () => {
+    onQuizSelect('all', 'review');
+  };
+
   return (
     <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
@@ -35,7 +41,7 @@ export default function Sidebar({ currentView, selectedDomain, domains, getDomai
           <button
             key={`quiz-${domain.id}`}
             className="nav-item"
-            onClick={() => onQuizSelect(domain.id)}
+            onClick={() => onQuizSelect(domain.id, 'basic')}
           >
             <span className="nav-icon">📝</span>
             <span>Domain {domain.id} Quiz</span>
@@ -44,10 +50,36 @@ export default function Sidebar({ currentView, selectedDomain, domains, getDomai
 
         <button
           className="nav-item"
-          onClick={() => onQuizSelect('all')}
+          onClick={() => onQuizSelect('all', 'basic')}
         >
           <span className="nav-icon">🏆</span>
           <span>Full Mock Exam</span>
+        </button>
+
+        {bookmarkCount > 0 && (
+          <button
+            className="nav-item"
+            onClick={handleBookmarkReview}
+          >
+            <span className="nav-icon">⭐</span>
+            <span>Bookmarked ({bookmarkCount})</span>
+          </button>
+        )}
+
+        <button
+          className="nav-item"
+          onClick={() => onQuizSelect('all', 'timer')}
+        >
+          <span className="nav-icon">⏱️</span>
+          <span>Timer Mode (60s)</span>
+        </button>
+
+        <button
+          className="nav-item"
+          onClick={() => onQuizSelect('all', 'enhanced')}
+        >
+          <span className="nav-icon">🎮</span>
+          <span>Enhanced Quiz</span>
         </button>
       </nav>
 

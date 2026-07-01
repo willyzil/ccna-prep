@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-export default function DomainDetail({ domain, progress, onComplete, onBack, onStartQuiz }) {
+export default function DomainDetail({ domain, progress, bookmarks, onComplete, onToggleBookmark, onBack, onStartQuiz }) {
   const [expandedTopic, setExpandedTopic] = useState(null);
 
   if (!domain) return <div>No domain selected</div>;
@@ -19,15 +19,8 @@ export default function DomainDetail({ domain, progress, onComplete, onBack, onS
     return progress[`${domain.id}-${idx}`];
   };
 
-  // Function to start basic quiz
-  const startBasicQuiz = () => {
-    onStartQuiz(domain.id, 'basic');
-  };
-
-  // Function to start enhanced quiz
-  const startEnhancedQuiz = () => {
-    onStartQuiz(domain.id, 'enhanced');
-  };
+  const completedCount = domain.topics.filter((_, idx) => isComplete(idx)).length;
+  const bookmarkCount = bookmarks ? domain.topics.filter((_, idx) => bookmarks[`${domain.id}-${idx}`]).length : 0;
 
   return (
     <div>
@@ -38,6 +31,9 @@ export default function DomainDetail({ domain, progress, onComplete, onBack, onS
         <div className="domain-badge">Domain {domain.id} — {domain.weight} of exam</div>
         <h1>{domain.icon} {domain.title}</h1>
         <p>{domain.description}</p>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          {completedCount}/{domain.topics.length} topics complete • {bookmarkCount} bookmarked
+        </p>
       </div>
 
       <div className="info-card highlight">
@@ -61,13 +57,22 @@ export default function DomainDetail({ domain, progress, onComplete, onBack, onS
                 {isComplete(idx) ? '✓ Complete' : '○ Incomplete'}
               </span>
             </h4>
-            <button
-              className={`btn ${isComplete(idx) ? 'btn-success' : 'btn-secondary'}`}
-              onClick={() => handleMarkComplete(idx)}
-              style={{ padding: '6px 12px', fontSize: '0.75rem' }}
-            >
-              {isComplete(idx) ? '✓ Done' : 'Mark Complete'}
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                className="btn"
+                onClick={() => onToggleBookmark(`${domain.id}-${idx}`)}
+                style={{ padding: '6px 12px', fontSize: '0.75rem', borderRadius: '6px', background: bookmarks && bookmarks[`${domain.id}-${idx}`] ? 'var(--warning)' : 'var(--bg-tertiary)', color: bookmarks && bookmarks[`${domain.id}-${idx}`] ? 'white' : 'var(--text-secondary)' }}
+              >
+                {bookmarks && bookmarks[`${domain.id}-${idx}`] ? '★ Bookmarked' : '☆ Bookmark'}
+              </button>
+              <button
+                className={`btn ${isComplete(idx) ? 'btn-success' : 'btn-secondary'}`}
+                onClick={() => handleMarkComplete(idx)}
+                style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+              >
+                {isComplete(idx) ? '✓ Done' : 'Mark Complete'}
+              </button>
+            </div>
           </div>
 
           {expandedTopic === idx && (
@@ -87,22 +92,29 @@ export default function DomainDetail({ domain, progress, onComplete, onBack, onS
       ))}
 
       {/* Quiz Buttons at the Bottom */}
-      <div style={{ marginTop: '32px', padding: '20px', backgroundColor: 'var(--card-bg)', borderRadius: '12px' }}>
+      <div style={{ marginTop: '32px', padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
         <h3 style={{ marginBottom: '16px', textAlign: 'center' }}>Ready to Test Your Knowledge?</h3>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <button
             className="btn btn-primary"
-            onClick={startBasicQuiz}
+            onClick={() => onStartQuiz(domain.id, 'basic')}
             style={{ padding: '12px 24px', fontSize: '1rem' }}
           >
-            📝 Basic Quiz ({domain.topics.length} topics)
+            📝 Basic Quiz
           </button>
           <button
             className="btn btn-secondary"
-            onClick={startEnhancedQuiz}
+            onClick={() => onStartQuiz(domain.id, 'enhanced')}
             style={{ padding: '12px 24px', fontSize: '1rem' }}
           >
-            🎮 Enhanced Quiz ({domain.topics.length} topics)
+            🎮 Enhanced
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => onStartQuiz(domain.id, 'timer')}
+            style={{ padding: '12px 24px', fontSize: '1rem' }}
+          >
+            ⏱️ Timer
           </button>
         </div>
       </div>
