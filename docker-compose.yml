@@ -1,0 +1,9 @@
+services:
+  ccna-prep:
+    build: .
+    container_name: ccna-prep
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8091:8080"
+    volumes:
+      - ./data:/data
