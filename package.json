@@ -12,6 +12,7 @@
     "server": "PORT=8092 node --disable-warning=ExperimentalWarning server/server.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
