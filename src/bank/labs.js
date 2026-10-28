@@ -1199,7 +1199,325 @@ interface vlan1
 
 \`show cdp neighbors detail\` also shows the neighbor's IP address and IOS version, useful when you need to reach a device you cannot see. LLDP (\`lldp run\`, then \`show lldp neighbors\`) is the vendor-neutral equivalent and is off by default on Cisco IOS.`,
   },
+
+  // ------------------------------------------------------------------ practice labs
+  // No `exam` field: they appear on the Labs page only, so exams A-D keep their blueprint weighting.
+  {
+    id: 'LAB-VOICE', obj: '2.1', type: 'lab', title: 'Voice VLAN for IP phones',
+    q: `Each desk has an IP phone, and the user's PC plugs into the phone's PC port, so one switch port carries both. Configure SW1 for the desks on Fa0/1 and Fa0/2.
+
+| VLAN | Name | Carries |
+|---|---|---|
+| 10 | USERS | the PCs (untagged) |
+| 150 | VOICE | the phones (tagged; a phone learns the VLAN from the switch over CDP or LLDP) |
+
+R1 already routes both VLANs on G0/0.10 and G0/0.150.`,
+    lab: {
+      devices: [
+        { name: 'R1', kind: 'router', config: `hostname R1
+interface g0/0
+ no shutdown
+interface g0/0.10
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0
+interface g0/0.150
+ encapsulation dot1Q 150
+ ip address 192.168.150.1 255.255.255.0` },
+        { name: 'SW1', kind: 'switch', config: 'hostname SW1' },
+        pc('PC1', '192.168.10.11', '192.168.10.1'), pc('PC2', '192.168.10.12', '192.168.10.1'),
+      ],
+      links: [['R1 g0/0', 'SW1 g0/1'], ['SW1 f0/1', 'PC1 f0'], ['SW1 f0/2', 'PC2 f0']],
+      topo: { R1: [50, 12], SW1: [50, 50], PC1: [25, 88], PC2: [75, 88] },
+      tasks: [
+        { text: 'Create VLAN 10 **USERS** and VLAN 150 **VOICE** on SW1.', check: L => L.dev('SW1').vlans[10]?.name === 'USERS' && L.dev('SW1').vlans[150]?.name === 'VOICE' },
+        { text: 'Make Fa0/1 and Fa0/2 static access ports in VLAN 10 with voice VLAN 150.', check: L => ['f0/1', 'f0/2'].every(p => { const s = L.intf('SW1', p).sw; return s.mode === 'access' && s.access === 10 && s.voice === 150; }) },
+        { text: 'Phones and PCs are end devices: enable PortFast on Fa0/1 and Fa0/2.', check: L => ['f0/1', 'f0/2'].every(p => L.intf('SW1', p).portfast) },
+        { text: 'Make Gi0/1 a static 802.1Q trunk that carries only VLANs 10 and 150.', check: L => { const s = L.intf('SW1', 'g0/1').sw; return s.mode === 'trunk' && JSON.stringify(s.allowed) === '[10,150]'; } },
+        { text: 'Verify: PC1 can ping its gateway 192.168.10.1.', check: L => L.ping('PC1', '192.168.10.1') },
+      ],
+      solution: steps('SW1', `enable
+configure terminal
+vlan 10
+name USERS
+vlan 150
+name VOICE
+exit
+interface range fa0/1 - 2
+switchport mode access
+switchport access vlan 10
+switchport voice vlan 150
+spanning-tree portfast
+exit
+interface g0/1
+switchport mode trunk
+switchport trunk allowed vlan 10,150
+end`),
+    },
+    exp: `- \`switchport voice vlan 150\` adds a second VLAN to an **access** port: the PC's frames stay untagged in the access VLAN, the phone tags its frames with VLAN 150. The switch tells the phone which VLAN to use through CDP (or LLDP-MED).
+- The port is still an access port, not a trunk: \`show interfaces fa0/1 switchport\` shows *Operational Mode: static access*, *Access Mode VLAN: 10* and *Voice VLAN: 150*.
+- PortFast belongs on every port that faces end devices. Without it a phone or PC waits through listening and learning before it can send.
+- The uplink must carry the voice VLAN too, or the phones register nowhere.
+
+Verify with \`show vlan brief\`, \`show interfaces fa0/1 switchport\`, \`show interfaces trunk\` and a ping from PC1 to 192.168.10.1.`,
+  },
+  {
+    id: 'LAB-LLDP', obj: '2.3', type: 'lab', title: 'Map the network with LLDP, keep CDP off the ISP link',
+    q: `The drawing has no port numbers and the cabling records are out of date. SW1 is the core switch; SW2 and SW3 hang off it, and SW1 Gi0/1 faces the ISP's router.
+
+The monitoring system only speaks LLDP, and security wants no Cisco discovery data leaving the network. Find the real ports from the neighbor tables.`,
+    lab: {
+      devices: [
+        { name: 'SW1', kind: 'switch', config: 'hostname SW1' },
+        { name: 'SW2', kind: 'switch', config: 'hostname SW2' },
+        { name: 'SW3', kind: 'switch', config: 'hostname SW3' },
+        { name: 'ISP', kind: 'router', config: `hostname ISP
+interface g0/0
+ ip address 203.0.113.1 255.255.255.252
+ no shutdown` },
+      ],
+      links: [['SW1 g0/1', 'ISP g0/0'], ['SW1 f0/24', 'SW2 f0/24'], ['SW1 f0/17', 'SW3 f0/9']],
+      topo: { ISP: [50, 12], SW1: [50, 46], SW2: [22, 84], SW3: [78, 84], hideIntf: true },
+      tasks: [
+        { text: 'Turn on LLDP on SW1, SW2 and SW3.', check: L => ['SW1', 'SW2', 'SW3'].every(s => L.dev(s).lldpRun) },
+        { text: 'Stop CDP on SW1\'s link to the ISP only. CDP must keep running everywhere else.', check: L => L.intf('SW1', 'g0/1').cdp === false && L.dev('SW1').cdpRun && L.intf('SW1', 'f0/24').cdp && L.intf('SW1', 'f0/17').cdp },
+        { text: 'Label the SW1–SW3 link from the neighbor tables: description **TO-SW3** on the SW1 port, **TO-SW1** on the SW3 port.', check: L => L.intf('SW1', 'f0/17').desc === 'TO-SW3' && L.intf('SW3', 'f0/9').desc === 'TO-SW1' },
+      ],
+      solution: [
+        ...steps('SW1', `enable
+configure terminal
+lldp run
+interface g0/1
+no cdp enable
+interface f0/17
+description TO-SW3
+end`),
+        ...steps('SW2', `enable
+configure terminal
+lldp run
+end`),
+        ...steps('SW3', `enable
+configure terminal
+lldp run
+interface f0/9
+description TO-SW1
+end`),
+      ],
+    },
+    exp: `- **LLDP** (IEEE 802.1AB) is off by default on Cisco IOS: \`lldp run\` turns it on globally. On real IOS it can be limited per port with \`no lldp transmit\` / \`no lldp receive\`.
+- **CDP** is on by default. \`no cdp run\` stops it everywhere; \`no cdp enable\` on an interface stops it on that port only, which is what you want on a link to another organisation.
+- In \`show lldp neighbors\` and \`show cdp neighbors\`, *Local Intf* is your port and *Port ID* is the neighbor's. On SW1 that gives Fa0/17 ↔ SW3 Fa0/9 and Fa0/24 ↔ SW2 Fa0/24.
+- Neighbors take a moment to appear and stay listed for the hold time after a link goes away (LLDP: 30 s timer, 120 s hold by default; CDP: 60 s and 180 s).`,
+  },
+  {
+    id: 'LAB-L3SW', obj: '2.1', type: 'lab', title: 'Inter-VLAN routing on a Layer 3 switch',
+    q: `DSW1 is a Catalyst 3650. VLAN 10 (STAFF) and VLAN 20 (LAB) already exist with the PCs assigned. Route between them on DSW1 itself, without a router-on-a-stick, and send everything else to R1.
+
+| Interface | Address |
+|---|---|
+| DSW1 VLAN 10 | 192.168.10.1/24 |
+| DSW1 VLAN 20 | 192.168.20.1/24 |
+| DSW1 Gi1/1/1 (to R1) | 10.0.0.2/30 |
+| R1 G0/0 | 10.0.0.1/30 (already configured, with routes back to both VLANs) |`,
+    lab: {
+      devices: [
+        { name: 'DSW1', kind: 'l3switch', config: `hostname DSW1
+vlan 10
+ name STAFF
+vlan 20
+ name LAB
+interface g1/0/1
+ switchport mode access
+ switchport access vlan 10
+interface g1/0/2
+ switchport mode access
+ switchport access vlan 20` },
+        { name: 'R1', kind: 'router', config: `hostname R1
+interface g0/0
+ ip address 10.0.0.1 255.255.255.252
+ no shutdown
+interface loopback0
+ ip address 1.1.1.1 255.255.255.255
+ip route 192.168.10.0 255.255.255.0 10.0.0.2
+ip route 192.168.20.0 255.255.255.0 10.0.0.2` },
+        pc('PC1', '192.168.10.10', '192.168.10.1'), pc('PC2', '192.168.20.10', '192.168.20.1'),
+      ],
+      links: [['R1 g0/0', 'DSW1 g1/1/1'], ['DSW1 g1/0/1', 'PC1 f0'], ['DSW1 g1/0/2', 'PC2 f0']],
+      topo: { R1: [50, 12], DSW1: [50, 50], PC1: [25, 88], PC2: [75, 88] },
+      tasks: [
+        { text: 'Turn DSW1 into a router: enable IP routing.', check: L => L.dev('DSW1').ipRouting === true },
+        { text: 'Create SVIs VLAN 10 (192.168.10.1/24) and VLAN 20 (192.168.20.1/24); both must be up.', check: L => L.has('DSW1', /ip address 192\.168\.10\.1 255\.255\.255\.0/, /^interface Vlan10$/) && L.has('DSW1', /ip address 192\.168\.20\.1 255\.255\.255\.0/, /^interface Vlan20$/) && L.up('DSW1', 'vlan10') && L.up('DSW1', 'vlan20') },
+        { text: 'Make Gi1/1/1 a routed port with 10.0.0.2/30.', check: L => L.intf('DSW1', 'g1/1/1').routed && L.has('DSW1', /ip address 10\.0\.0\.2 255\.255\.255\.252/, /^interface GigabitEthernet1\/1\/1$/) },
+        { text: 'Send all other traffic to R1 with a default route.', check: L => L.route('DSW1', '0.0.0.0/0', 'S') },
+        { text: 'Verify: PC1 can ping PC2 and R1\'s loopback 1.1.1.1.', check: L => L.ping('PC1', '192.168.20.10') && L.ping('PC1', '1.1.1.1') },
+      ],
+      solution: steps('DSW1', `enable
+configure terminal
+ip routing
+interface vlan 10
+ip address 192.168.10.1 255.255.255.0
+no shutdown
+interface vlan 20
+ip address 192.168.20.1 255.255.255.0
+no shutdown
+interface g1/1/1
+no switchport
+ip address 10.0.0.2 255.255.255.252
+no shutdown
+exit
+ip route 0.0.0.0 0.0.0.0 10.0.0.1
+end`),
+    },
+    exp: `- A multilayer switch only routes once \`ip routing\` is on. Without it each SVI still answers pings to itself, but nothing is forwarded between VLANs.
+- An **SVI** (\`interface vlan 10\`) is the VLAN's gateway. It comes up only when the VLAN exists *and* at least one port in that VLAN is up and forwarding (or a trunk carries it).
+- \`no switchport\` turns a switch port into a **routed port**: it belongs to no VLAN and takes an IP address directly, like a router interface. That is the usual uplink from a distribution switch.
+- Compared with router-on-a-stick, inter-VLAN traffic never leaves the switch, so one router link no longer limits it.
+
+Verify with \`show ip interface brief\` (Vlan10, Vlan20 and Gi1/1/1 up/up), \`show ip route\` (two connected VLANs, the /30 and \`S* 0.0.0.0/0\`) and the pings.`,
+  },
+  {
+    id: 'LAB-EUI64', obj: '1.9', type: 'lab', title: 'IPv6 EUI-64 addressing',
+    q: `Bring up IPv6 between two sites. The PCs already have static addresses (::10) with their router's ::1 as gateway.
+
+The R1–R2 link must use **EUI-64**: each router builds its own interface ID from its MAC address. You will have to look up the addresses the routers chose before you can route to them.`,
+    lab: {
+      devices: [
+        { name: 'R1', kind: 'router', config: `hostname R1
+interface g0/0
+ no shutdown
+interface g0/1
+ no shutdown` },
+        { name: 'R2', kind: 'router', config: `hostname R2
+interface g0/0
+ no shutdown
+interface g0/1
+ no shutdown` },
+        { name: 'PC1', kind: 'host', host: { v6: '2001:db8:a::10/64', v6gw: '2001:db8:a::1' } },
+        { name: 'PC2', kind: 'host', host: { v6: '2001:db8:b::10/64', v6gw: '2001:db8:b::1' } },
+      ],
+      links: [['R1 g0/0', 'R2 g0/0'], ['R1 g0/1', 'PC1 f0'], ['R2 g0/1', 'PC2 f0']],
+      topo: { R1: [30, 40], R2: [70, 40], PC1: [30, 86], PC2: [70, 86] },
+      tasks: [
+        { text: 'Enable IPv6 routing on R1 and R2.', check: L => L.dev('R1').v6Routing && L.dev('R2').v6Routing },
+        { text: 'Address G0/0 on both routers from **2001:db8:12::/64** using EUI-64.', check: L => ['R1', 'R2'].every(r => L.intf(r, 'g0/0').v6.some(a => a.type === 'eui-64' && a.addr === parseV6('2001:db8:12::') && a.len === 64)) },
+        { text: 'Give the LANs (G0/1) 2001:db8:a::1/64 on R1 and 2001:db8:b::1/64 on R2.', check: L => has6(L, 'R1', 'g0/1', '2001:db8:a::1') && has6(L, 'R2', 'g0/1', '2001:db8:b::1') },
+        { text: 'On R1, route 2001:db8:b::/64 to R2\'s **EUI-64 global address** on the link (not its link-local).', check: L => L.dev('R1').statics.some(r => r.fam === 6 && r.len === 64 && r.net === parseV6('2001:db8:b::') && r.nh === eui64('2001:db8:12:0', L.intf('R2', 'g0/0').mac)) },
+        { text: 'On R2, route 2001:db8:a::/64 to R1\'s EUI-64 global address on the link.', check: L => L.dev('R2').statics.some(r => r.fam === 6 && r.len === 64 && r.net === parseV6('2001:db8:a::') && r.nh === eui64('2001:db8:12:0', L.intf('R1', 'g0/0').mac)) },
+        { text: 'Verify: PC1 can ping PC2 (2001:db8:b::10).', check: L => L.ping('PC1', '2001:db8:b::10') },
+      ],
+      solution: [
+        ...steps('R1', `enable
+configure terminal
+ipv6 unicast-routing
+interface g0/0
+ipv6 address 2001:db8:12::/64 eui-64
+interface g0/1
+ipv6 address 2001:db8:a::1/64
+exit
+ipv6 route 2001:db8:b::/64 2001:db8:12:0:20f:50ff:fe85:401
+end`),
+        ...steps('R2', `enable
+configure terminal
+ipv6 unicast-routing
+interface g0/0
+ipv6 address 2001:db8:12::/64 eui-64
+interface g0/1
+ipv6 address 2001:db8:b::1/64
+exit
+ipv6 route 2001:db8:a::/64 2001:db8:12:0:20c:4bff:fecc:401
+end`),
+      ],
+    },
+    exp: `**Modified EUI-64** turns a 48-bit MAC into a 64-bit interface ID:
+
+1. Split the MAC in half and insert **FFFE**: 000f.5085.0401 → 000f.50**ff.fe**85.0401
+2. Flip the 7th bit of the first byte (the universal/local bit): 0x00 → **0x02**
+3. Result: 020f:50ff:fe85:0401, so R2's link address is **2001:db8:12::20f:50ff:fe85:401**
+
+- \`ipv6 address 2001:db8:12::/64 eui-64\` gives only the prefix; the router fills in the rest. Read the result with \`show ipv6 interface brief\`. The link-local address uses the same interface ID behind FE80::.
+- The MAC comes from \`show interfaces g0/0\` (*address is …*), if you want to work it out by hand.
+- A static route to a **global** next hop needs no exit interface; a route to a **link-local** next hop does, because the same FE80:: address can exist on every link.`,
+  },
+  {
+    id: 'LAB-TS-INTERVLAN', obj: '2.2', type: 'lab', title: 'Troubleshoot inter-VLAN routing',
+    q: `Router-on-a-stick was working until a change window last night. Now neither VLAN reaches its gateway. Find and fix the faults. Do not change the PCs or the address plan.
+
+| VLAN | Name | Subnet | Gateway |
+|---|---|---|---|
+| 10 | STAFF | 192.168.10.0/24 | R1 G0/0.10, .1 |
+| 20 | GUEST | 192.168.20.0/24 | R1 G0/0.20, .1 |
+
+PC1 is on SW1 Fa0/1 (VLAN 10), PC2 on Fa0/2 (VLAN 20).`,
+    lab: {
+      devices: [
+        { name: 'R1', kind: 'router', config: `hostname R1
+interface g0/0
+ no shutdown
+interface g0/0.10
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0
+interface g0/0.20
+ encapsulation dot1Q 21
+ ip address 192.168.20.1 255.255.255.0` },
+        { name: 'SW1', kind: 'switch', config: `hostname SW1
+vlan 10
+ name STAFF
+vlan 20
+ name GUEST
+vlan 30
+ name SPARE
+interface f0/1
+ switchport mode access
+ switchport access vlan 10
+interface f0/2
+ switchport mode access
+ switchport access vlan 30
+interface g0/1
+ switchport mode trunk
+ switchport trunk allowed vlan 1,30` },
+        pc('PC1', '192.168.10.10', '192.168.10.1'), pc('PC2', '192.168.20.10', '192.168.20.1'),
+      ],
+      links: [['R1 g0/0', 'SW1 g0/1'], ['SW1 f0/1', 'PC1 f0'], ['SW1 f0/2', 'PC2 f0']],
+      topo: { R1: [50, 12], SW1: [50, 50], PC1: [25, 88], PC2: [75, 88] },
+      tasks: [
+        { text: 'PC1 can ping its gateway 192.168.10.1.', check: L => L.ping('PC1', '192.168.10.1') },
+        { text: 'PC2 can ping its gateway 192.168.20.1.', check: L => L.ping('PC2', '192.168.20.1') },
+        { text: 'PC1 can ping PC2.', check: L => L.ping('PC1', '192.168.20.10') },
+        { text: 'PC2\'s port is in VLAN 20 and the trunk carries only VLANs 10 and 20.', check: L => L.vlanOf('SW1', 'f0/2') === 20 && JSON.stringify(L.intf('SW1', 'g0/1').sw.allowed) === '[10,20]' },
+      ],
+      solution: [
+        ...steps('SW1', `enable
+configure terminal
+interface g0/1
+switchport trunk allowed vlan 10,20
+interface f0/2
+switchport access vlan 20
+end`),
+        ...steps('R1', `enable
+configure terminal
+interface g0/0.20
+encapsulation dot1Q 20
+ip address 192.168.20.1 255.255.255.0
+end`),
+      ],
+    },
+    exp: `Three faults, each found with one command:
+
+1. **The trunk drops both VLANs.** \`show interfaces trunk\` on SW1: *Vlans allowed on trunk* is 1,30. Fix with \`switchport trunk allowed vlan 10,20\`. Without \`add\`, that command **replaces** the list, which is how this kind of fault usually happens.
+2. **PC2 sits in the wrong VLAN.** \`show vlan brief\`: Fa0/2 is in VLAN 30. Fix with \`switchport access vlan 20\`.
+3. **R1 tags GUEST traffic with the wrong VLAN.** \`show running-config interface g0/0.20\`: *encapsulation dot1Q 21*. Fix with \`encapsulation dot1Q 20\`.
+
+Work bottom-up: the host's port and VLAN, then the trunk, then the router's subinterfaces. Each layer you confirm rules out half of the possible causes.`,
+  },
 ];
+
+// Modified EUI-64 address on a /64: flip the U/L bit, insert FFFE. prefix64 = the first four groups.
+function eui64(prefix64, mac) {
+  const b = mac.replace(/\./g, '').match(/../g).map(x => parseInt(x, 16));
+  b[0] ^= 0x02;
+  const id = [b[0], b[1], b[2], 0xff, 0xfe, b[3], b[4], b[5]];
+  const groups = [0, 2, 4, 6].map(i => ((id[i] << 8) | id[i + 1]).toString(16));
+  return parseV6(`${prefix64}:${groups.join(':')}`);
+}
 
 function fmt(n) {
   n = BigInt(n);
