@@ -133,6 +133,25 @@ button { font: inherit; }
 .modal-body { padding: .25rem 1.2rem 1rem; overflow: auto; }
 .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; padding: .8rem 1.2rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
 
+/* ---------------------------------------------------------------- accounts */
+.account-btn { display: inline-flex; align-items: center; gap: .45rem; max-width: 16rem; flex: none; }
+.account-btn .avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: .75rem; font-weight: 700; flex: none; }
+.account-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auth-form { display: flex; flex-direction: column; gap: .9rem; padding-bottom: .25rem; }
+.auth-form p { margin: 0; }
+.auth-lead { font-size: .92rem; }
+.auth-field input { width: 100%; font-size: 1rem; }
+.auth-hint { font-size: .8rem; }
+.auth-links { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; font-size: .9rem; color: var(--muted); }
+.form-error { background: var(--bad-soft); color: var(--bad); border-radius: 8px; padding: .5rem .7rem; margin: 0; font-size: .9rem; }
+.link-btn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.link-btn:disabled { opacity: .5; cursor: default; }
+.link-btn.bad-text { color: var(--bad); }
+.danger-zone { border-top: 1px solid var(--border); padding-top: .8rem; }
+.banner.good { background: var(--ok-soft); color: var(--ok); }
+.banner.info { background: var(--accent-soft); color: var(--text); }
+.banner .btn, .banner .link-btn { margin-left: .6rem; }
+
 /* ---------------------------------------------------------------- home */
 .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
 .hero p { max-width: 640px; margin: 0; }
@@ -370,6 +389,8 @@ pre.cli, pre.code { margin: 0; padding: .75rem .9rem; background: var(--term-bg)
 @media (max-width: 640px) {
   body { font-size: 15px; }
   h1 { font-size: 1.35rem; }
+  .account-email { display: none; }
+  .account-btn { padding-left: .45rem; padding-right: .45rem; }
   .topbar { gap: .6rem; }
   .brand { font-size: .95rem; }
   .hero-stats { width: 100%; }

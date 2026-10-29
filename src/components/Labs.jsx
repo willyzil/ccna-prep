@@ -24,7 +24,7 @@ export default function Labs({ bank, stats, onStart }) {
                   <button key={q.id} className="lab-card" onClick={() => onStart({ title: q.title, examId: 'labs', qids: [q.id], fixedMode: 'study', direct: true })}>
                     <span className={`tag ${q.type === 'lab' ? 'lab' : ''}`}>{q.type === 'lab' ? 'Lab' : 'Sim'}</span>
                     <b>{q.title}</b>
-                    <span className="muted sm">{q.obj} {objectiveName(q.obj)} · Exam {q.exam}</span>
+                    <span className="muted sm">{q.obj} {objectiveName(q.obj)} · {q.exam ? `Exam ${q.exam}` : 'Practice'}</span>
                     {s && <span className={`sm ${s.lastRight ? 'ok-text' : 'bad-text'}`}>{s.lastRight ? 'Passed last time' : 'Not passed last time'}</span>}
                   </button>
                 );
